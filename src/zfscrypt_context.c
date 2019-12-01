@@ -53,17 +53,22 @@ zfscrypt_err_t zfscrypt_context_log_err(zfscrypt_context_t* self, zfscrypt_err_t
     if (level == LOG_DEBUG && !self->debug) {
         return err;
     }
+    const char* domain = NULL;
     switch (err.type) {
-    case ZFSCRYPT_ERR_OS:
-        zfscrypt_context_log(self, level, "OS: %s: %s (%s:%d:%s)", err.message, err.description, err.file, err.line, err.function);
-        break;
-    case ZFSCRYPT_ERR_PAM:
-        zfscrypt_context_log(self, level, "PAM: %s: %s (%s:%d:%s)", err.message, err.description, err.file, err.line, err.function);
-        break;
-    case ZFSCRYPT_ERR_ZFS:
-        zfscrypt_context_log(self, level, "ZFS: %s: %s (%s:%d:%s)", err.message, err.description, err.file, err.line, err.function);
-        break;
+        case ZFSCRYPT_ERR_OS:
+            domain = "OS";
+            break;
+        case ZFSCRYPT_ERR_PAM:
+            domain = "PAM";
+            break;
+        case ZFSCRYPT_ERR_ZFS:
+            domain = "ZFS";
+            break;
+        default:
+            domain = "UNKNOWN";
+            break;
     }
+    zfscrypt_context_log(self, level, "%s: %s: %s (%s:%d:%s)", domain, err.message, err.description, err.file, err.line, err.function);
     return err;
 }
 
