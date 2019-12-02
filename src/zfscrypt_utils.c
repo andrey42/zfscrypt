@@ -98,10 +98,11 @@ int drop_filesystem_cache() {
     return err < 0 ? -errno : 0;
 }
 
-// Stolen from https://github.com/google/fscrypt/blob/master/pam/pam.c
+/*
+ * Overwrites the given memory region with zeros before unlocking and freeing it.
+ */
 void secure_free(void* data, size_t size) {
-    static void* (*const volatile secure_memset)(void*, int, size_t) = &memset;
-    secure_memset(data, 0, size);
+    explicit_bzero(data, size);
     munlock(data, size);
     free(data);
 }
