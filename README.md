@@ -12,14 +12,14 @@ Check that ZFS v0.8.0 or later is installed.
 zfs -V
 ~~~
 
-Build and install the PAM module.
+Build and install the PAM module. This requires libzfs and libnvpair to be present on your system. Which should already be the case if you use ZFS.
 
 ~~~ sh
 make
-make install
+sudo make install
 ~~~
 
-Unfortunately PAM configuration is a bit of a mess, beacuse every distribution configures PAM differently. So chances are high that you have to adapt the follwing example to your distribution.
+Unfortunately PAM configuration is a bit of a mess, because every distribution configures PAM differently. So chances are high that you have to adapt the following example to your distribution.
 
 > **Note:** Tested on Arch Linux with pam v1.3.1 and zfs v0.8.2.
 
@@ -36,7 +36,7 @@ session [success=1 default=ignore] pam_succeed_if.so service = systemd-user quie
 session optional pam_zfscrypt.so
 ~~~
 
-The first line is needed to work around some quirks in systemd (more info [here](https://wiki.archlinux.org/index.php/Pam_mount)).
+The first line is needed to work around some [quirks in systemd](https://wiki.archlinux.org/index.php/Pam_mount).
 
 Finally append the next line to `etc/pam.d/passwd`:
 
@@ -45,6 +45,15 @@ password optional pam_zfscrypt.so
 ~~~
 
 Having problems with PAM? Maybe one of this Arch Wiki pages can help you: [pam](https://wiki.archlinux.org/index.php/PAM), [fscrypt](https://wiki.archlinux.org/index.php/Fscrypt)
+
+## Configuration
+
+The zfscrypt PAM module takes the following, optional arguments:
+
+| Argument      | Description                                                  |
+|---------------|--------------------------------------------------------------|
+| `runtime_dir` | where to store session counters, defaults to `/run/zfscrypt` |
+| `debug`       | enables verbose logging                                      |
 
 ## Usage
 
