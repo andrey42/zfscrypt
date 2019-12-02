@@ -111,20 +111,23 @@ void secure_cleanup(unused pam_handle_t* handle, void* data, unused int error_st
     secure_free(data, size);
 }
 
-// Stolen from https://github.com/google/fscrypt/blob/master/pam/pam.c
 void* secure_malloc(const size_t size) {
     void* data = malloc(size);
-    if (data == NULL) {
+    if (data == NULL)
         return NULL;
+    const int err = mlock(data, size);
+    if (err == 0) {
+        return data;
+    } else {
+	free(data);
+	return NULL;
     }
-    // FIXME check return value
-    mlock(data, size);
-    return data;
 }
 
 void* secure_dup(void const* const data) {
     const size_t size = strlen(data) + 1;
     void* copy = secure_malloc(size);
-    memcpy(copy, data, size);
-    return copy;
+    if (copy == NULL)
+	return NULL;
+    return memcpy(copy, data, size);
 }
