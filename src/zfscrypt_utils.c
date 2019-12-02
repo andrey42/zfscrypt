@@ -82,13 +82,6 @@ int open_exclusive(const char* path, const int flags) {
     return fd;
 }
 
-/*
- * Instructs kernel to free the reclaimable inodes and dentries.
- * This has the effect of making encrypted directories whose keys are
- * not present no longer accessible. Requires root privileges.
- *
- * Also see https://www.kernel.org/doc/Documentation/sysctl/vm.txt
- */
 int drop_filesystem_cache() {
     sync();
     defer(close_file) FILE* file = fopen("/proc/sys/vm/drop_caches", "w");
@@ -98,9 +91,6 @@ int drop_filesystem_cache() {
     return err < 0 ? -errno : 0;
 }
 
-/*
- * Overwrites the given memory region with zeros before unlocking and freeing it.
- */
 void secure_free(void* data, size_t size) {
     explicit_bzero(data, size);
     munlock(data, size);
@@ -120,8 +110,8 @@ void* secure_malloc(const size_t size) {
     if (err == 0) {
         return data;
     } else {
-	free(data);
-	return NULL;
+        free(data);
+        return NULL;
     }
 }
 
@@ -129,6 +119,6 @@ void* secure_dup(void const* const data) {
     const size_t size = strlen(data) + 1;
     void* copy = secure_malloc(size);
     if (copy == NULL)
-	return NULL;
+        return NULL;
     return memcpy(copy, data, size);
 }

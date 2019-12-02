@@ -24,19 +24,18 @@ int zfscrypt_context_end(zfscrypt_context_t* self, zfscrypt_err_t err);
 
 void zfscrypt_context_log(zfscrypt_context_t* self, const int level, const char* format, ...);
 
-// function itself does not fail, always returns err argument
+// Never fails itself, always returns err argument.
 zfscrypt_err_t zfscrypt_context_log_err(zfscrypt_context_t* self, zfscrypt_err_t err);
 
-// gets token from pam items and stores it in pam data
+// Gets token from pam items and stores it in pam data.
 zfscrypt_err_t zfscrypt_context_persist_token(zfscrypt_context_t* self);
 
-// gets token from pam data, fallback to interactive input
+// Gets token from pam data.
 zfscrypt_err_t zfscrypt_context_restore_token(zfscrypt_context_t* self, const char** token);
 
-// deletes token from pam data
+// Deletes token from pam data.
 zfscrypt_err_t zfscrypt_context_clear_token(zfscrypt_context_t* self);
 
-// gets tokens from pam data
 zfscrypt_err_t zfscrypt_context_get_tokens(zfscrypt_context_t* self, const char** old_token, const char** new_token);
 
 zfscrypt_err_t zfscrypt_context_drop_privs(zfscrypt_context_t* self);
@@ -62,3 +61,4 @@ zfscrypt_err_t zfscrypt_context_pam_data_clear_token(zfscrypt_context_t* self);
 extern const char ZFSCRYPT_CONTEXT_ARG_DEBUG[];
 extern const char ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR[];
 extern const size_t ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR_LEN;
+extern const char ZFSCRYPT_CONTEXT_PAM_DATA_TOKEN[];

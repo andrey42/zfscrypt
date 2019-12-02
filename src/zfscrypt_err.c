@@ -1,6 +1,7 @@
 #include "zfscrypt_err.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <libzfs.h>
 #include <security/pam_appl.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@ zfscrypt_err_t zfscrypt_err_pam_create(const int value, const char* message, con
     return (zfscrypt_err_t) {
         .type = ZFSCRYPT_ERR_PAM,
         .value = abs(value),
-        // This is safe because pam_strerror never wants to uses the first argument, see https://github.com/linux-pam/linux-pam/blob/master/libpam/pam_strerror.c
+        // This is safe because pam_strerror never uses the first argument, see https://github.com/linux-pam/linux-pam/blob/master/libpam/pam_strerror.c
         .description = pam_strerror(NULL, abs(value)),
         .message = message,
         .file = file,
@@ -32,7 +33,7 @@ zfscrypt_err_t zfscrypt_err_pam_create(const int value, const char* message, con
 }
 
 zfscrypt_err_t zfscrypt_err_zfs_create(const int value, const char* message, const char* file, const int line, const char* function) {
-    // FIXME This is the implementation of the ugly libzfs_handle workaround.
+    // FIXME This is the implementation of the ugly libzfs_handle workaround. See header.
     libzfs_dummy_t dummy;
     dummy.libzfs_error = abs(value);
     dummy.libzfs_desc[0] = '\0';
@@ -53,6 +54,7 @@ int zfscrypt_err_for_pam(zfscrypt_err_t err) {
         return PAM_SUCCESS;
     switch (err.type) {
         case ZFSCRYPT_ERR_OS:
+            return err.value == ENOMEM ? PAM_BUF_ERR : PAM_SYSTEM_ERR;
         case ZFSCRYPT_ERR_ZFS:
             return PAM_SYSTEM_ERR;
         case ZFSCRYPT_ERR_PAM:

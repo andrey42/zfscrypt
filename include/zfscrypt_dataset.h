@@ -72,7 +72,8 @@ zfscrypt_err_t zfscrypt_dataset_iter(zfscrypt_context_t* context, const char* ke
 
 extern const char ZFSCRYPT_USER_PROPERTY[];
 
-// FIXME Copied from /usr/include/libzfs/sys/zio.h because including <sys/zio.h> results in compiler error about unknown type rlim64_t
+// FIXME Copied from /usr/include/libzfs/sys/zio.h because including <sys/zio.h> results in
+// compiler error about unknown type rlim64_t.
 enum zio_encrypt {
     ZIO_CRYPT_INHERIT = 0,
     ZIO_CRYPT_ON,

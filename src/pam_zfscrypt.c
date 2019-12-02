@@ -47,18 +47,18 @@ extern int pam_sm_setcred(unused pam_handle_t* handle, unused int flags, unused 
  * Counts active sessions. Executes zfs load-key and zfs mount on all user datasets
  * if it's the first session.
  */
-extern int pam_sm_open_session(pam_handle_t* handle, int flags, int argc, char const** argv) {
+extern int pam_sm_open_session(pam_handle_t* handle, int flags, int argc, const char** argv) {
     zfscrypt_context_t context;
     zfscrypt_err_t err = zfscrypt_context_begin(&context, handle, flags, argc, argv);
     int counter = 0;
-    const char* token = NULL;
-    if (!err.value) {
+    if (!err.value)
         err = zfscrypt_context_log_err(
             &context,
-            zfscrypt_session_counter_update(&counter, context.runtime_dir, context.user, +1));
-    }
+            zfscrypt_session_counter_update(&counter, context.runtime_dir, context.user, +1)
+        );
     if (counter == 1) {
         // This is the first session for the user. Unlock and mount the filesystems.
+        const char* token = NULL;
         if (!err.value)
             err = zfscrypt_context_drop_privs(&context);
         if (!err.value)
@@ -79,13 +79,13 @@ extern int pam_sm_close_session(pam_handle_t* handle, int flags, int argc, char 
     zfscrypt_context_t context;
     zfscrypt_err_t err = zfscrypt_context_begin(&context, handle, flags, argc, argv);
     int counter = 0;
-    if (!err.value) {
+    if (!err.value)
         err = zfscrypt_context_log_err(
             &context,
-            zfscrypt_session_counter_update(&counter, context.runtime_dir, context.user, -1));
-    }
+            zfscrypt_session_counter_update(&counter, context.runtime_dir, context.user, -1)
+        );
     if (counter == 0) {
-	// The last session has been closed. Unmount and lock the filesystems.
+        // The last session has been closed. Unmount and lock the filesystems.
         if (!err.value)
             err = zfscrypt_context_drop_privs(&context);
         if (!err.value)
@@ -115,9 +115,12 @@ extern int pam_sm_chauthtok(pam_handle_t* handle, int flags, int argc, char cons
             err = zfscrypt_context_drop_privs(&context);
         if (!err.value)
             err = zfscrypt_context_get_tokens(&context, &old_token, &new_token);
-        // FIXME passwd updates the login password even if this module fails intentionally here
+        // FIXME passwd updates the login password even if we fail intentionally here
         if (!err.value && strlen(new_token) < 8)
-            err = zfscrypt_err_pam(PAM_AUTHTOK_ERR, "ZFS encryption requires a minimum password length of eight characters");
+            err = zfscrypt_err_pam(
+                PAM_AUTHTOK_ERR,
+                "ZFS encryption requires a minimum password length of eight characters"
+            );
         if (!err.value)
             err = zfscrypt_dataset_update_all(&context, old_token, new_token);
         if (context.privs.is_dropped)

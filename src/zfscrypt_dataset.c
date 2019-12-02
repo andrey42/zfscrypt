@@ -6,8 +6,6 @@
 
 #include "zfscrypt_utils.h"
 
-// Note regarding error handling with libzfs: Normally functions return directly an errno code, but zfs_(un)mount returns just -1 on error
-
 // public functions
 
 zfscrypt_err_t zfscrypt_dataset_lock_all(zfscrypt_context_t* context) {
@@ -38,7 +36,7 @@ zfscrypt_err_t zfscrypt_dataset_lock(zfscrypt_dataset_t* self) {
         err = zfscrypt_dataset_unmount(self);
     if (!err && zfscrypt_dataset_key_loaded(self))
         err = zfscrypt_dataset_unload_key(self);
-    return zfscrypt_err_zfs(err, "Locked dataset");
+    return zfscrypt_err_zfs(err, "Locking dataset");
 }
 
 zfscrypt_err_t zfscrypt_dataset_unlock(zfscrypt_dataset_t* self) {
@@ -47,7 +45,7 @@ zfscrypt_err_t zfscrypt_dataset_unlock(zfscrypt_dataset_t* self) {
         err = zfscrypt_dataset_load_key(self);
     if (!err && !zfscrypt_dataset_mounted(self))
         err = zfscrypt_dataset_mount(self);
-    return zfscrypt_err_zfs(err, "Unlocked dataset");
+    return zfscrypt_err_zfs(err, "Unlocking dataset");
 }
 
 zfscrypt_err_t zfscrypt_dataset_update(zfscrypt_dataset_t* self) {
@@ -59,7 +57,7 @@ zfscrypt_err_t zfscrypt_dataset_update(zfscrypt_dataset_t* self) {
         err = zfscrypt_dataset_change_key(self);
     if (!loaded)
         (void) zfscrypt_dataset_unload_key(self);
-    return zfscrypt_err_zfs(err, "Updated dataset key");
+    return zfscrypt_err_zfs(err, "Updating dataset key");
 }
 
 // private methods, locking and unlocking
@@ -81,7 +79,7 @@ int zfscrypt_dataset_load_key(zfscrypt_dataset_t* self) {
         dup2(in_fds[0], STDIN_FILENO);
         close(in_fds[0]);
         close(in_fds[1]);
-        // zfs_crypto_load_key(zfs_handle_t *zhp, boolean_t noop, char *alt_keylocation)
+        // zfs_crypto_load_key(zfs_handle_t *zhp, boolean_t dry_run, char *alternative_keylocation)
         const int err = zfs_crypto_load_key(self->handle, B_FALSE, NULL);
         exit(err);
     } else {
@@ -99,7 +97,7 @@ int zfscrypt_dataset_unload_key(zfscrypt_dataset_t* self) {
 }
 
 int zfscrypt_dataset_change_key(zfscrypt_dataset_t* self) {
-    // libzfs does not provide an direct interface to change datasets keys,
+    // libzfs does not provide a direct interface to change datasets keys,
     // it always wants to read them from stdin itself.
     int in_fds[2];
     pipe(in_fds);
@@ -126,6 +124,9 @@ bool zfscrypt_dataset_mounted(zfscrypt_dataset_t* self) {
     return zfs_is_mounted(self->handle, NULL);
 }
 
+// Note regarding error handling with libzfs:
+// Normally functions return directly an errno code, but zfs_(un)mount returns just -1 on error
+
 int zfscrypt_dataset_mount(zfscrypt_dataset_t* self) {
     // zfs_mount(zfs_handle_t *zhp, const char *options, int flags)
     const int err = zfs_mount(self->handle, NULL, 0);
@@ -143,10 +144,11 @@ int zfscrypt_dataset_unmount(zfscrypt_dataset_t* self) {
 int zfscrypt_dataset_properties_get_user(zfscrypt_dataset_t* self, const char** user) {
     nvlist_t* props = zfs_get_user_props(self->handle);
     nvlist_t* prop = NULL;
-    const int err = nvlist_lookup_nvlist(props, ZFSCRYPT_USER_PROPERTY, &prop);
-    if (err)
-        return err;
-    return nvlist_lookup_string(prop, ZPROP_VALUE, (char**) user);
+    int err = nvlist_lookup_nvlist(props, ZFSCRYPT_USER_PROPERTY, &prop);
+    if (!err)
+        err = nvlist_lookup_string(prop, ZPROP_VALUE, (char**) user);
+    assert(err || user != NULL);
+    return err;
 }
 
 bool zfscrypt_dataset_has_matching_user(zfscrypt_dataset_t* self) {
@@ -157,7 +159,10 @@ bool zfscrypt_dataset_has_matching_user(zfscrypt_dataset_t* self) {
 
 bool zfscrypt_dataset_has_mountpoint(zfscrypt_dataset_t* self) {
     char mountpoint[ZFS_MAXPROPLEN];
-    const int err = zfs_prop_get(self->handle, ZFS_PROP_MOUNTPOINT, mountpoint, sizeof(mountpoint), NULL, NULL, 0, B_FALSE);
+    const int err = zfs_prop_get(
+        self->handle, ZFS_PROP_MOUNTPOINT, mountpoint, sizeof(mountpoint),
+        NULL, NULL, 0, B_FALSE
+    );
     return !err && strnq(mountpoint, ZFS_MOUNTPOINT_NONE);
 }
 
@@ -172,11 +177,15 @@ bool zfscrypt_dataset_is_encrypted(zfscrypt_dataset_t* self) {
 }
 
 bool zfscrypt_dataset_does_prompt(zfscrypt_dataset_t* self) {
-    // FIXME What's up with keylocation? Why does zfs_prop_get_int always return 0? Use enum ZFS_KEYLOCATION_PROMPT
+    // FIXME What's up with keylocation? Why does zfs_prop_get_int always return 0?
+    // Should use enum ZFS_KEYLOCATION_PROMPT here
     // int keylocation = 0;
     // err = zfs_prop_get_numeric(zfs_handle, ZFS_PROP_KEYLOCATION, &keylocation, NULL, NULL, 0);
     char keylocation[ZFS_MAXPROPLEN];
-    const int err = zfs_prop_get(self->handle, ZFS_PROP_KEYLOCATION, keylocation, sizeof(keylocation), NULL, NULL, 0, B_TRUE);
+    const int err = zfs_prop_get(
+        self->handle, ZFS_PROP_KEYLOCATION, keylocation, sizeof(keylocation),
+        NULL, NULL, 0, B_TRUE
+    );
     return !err && streq(keylocation, "prompt");
 }
 
@@ -204,10 +213,11 @@ int zfscrypt_dataset_filesystem_visitor(zfs_handle_t* handle, void* data) {
         .key = iter->key,
         .new_key = iter->new_key
     };
-    if (zfscrypt_dataset_valid(&dataset)) {
-        const zfscrypt_err_t err = iter->callback(&dataset);
-        zfscrypt_context_log_err(iter->context, err);
-    }
+    if (zfscrypt_dataset_valid(&dataset))
+        zfscrypt_context_log_err(
+            iter->context,
+            iter->callback(&dataset)
+        );
     return zfs_iter_filesystems(handle, zfscrypt_dataset_filesystem_visitor, data);
 }
 
@@ -223,10 +233,9 @@ zfscrypt_err_t zfscrypt_dataset_iter(zfscrypt_context_t* context, const char* ke
         .new_key = new_key
     };
     const int err = zfs_iter_root(context->libzfs, zfscrypt_dataset_root_visitor, &iter);
-    return zfscrypt_err_zfs(err, "Iterated over all datasets");
+    return zfscrypt_err_zfs(err, "Iterating over all datasets");
 }
 
 // private constants
 
-const int zfscrypt_dataset_iter_error_len = 32;
 const char ZFSCRYPT_USER_PROPERTY[] = "io.github.benkerry:zfscrypt_user";

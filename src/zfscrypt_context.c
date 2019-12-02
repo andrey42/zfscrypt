@@ -27,7 +27,8 @@ zfscrypt_err_t zfscrypt_context_begin(zfscrypt_context_t* self, pam_handle_t* ha
         .allocated = 0,
         .old_gid = -1,
         .old_uid = -1,
-        .is_dropped = 0};
+        .is_dropped = 0
+    };
     zfscrypt_parse_args(self, argc, argv);
     zfscrypt_err_t err = zfscrypt_context_pam_get_user(self, &self->user);
     zfscrypt_context_log_err(self, err);
@@ -50,9 +51,8 @@ void zfscrypt_context_log(zfscrypt_context_t* self, const int level, const char*
 
 zfscrypt_err_t zfscrypt_context_log_err(zfscrypt_context_t* self, zfscrypt_err_t err) {
     const int level = err.value == 0 ? LOG_DEBUG : LOG_ERR;
-    if (level == LOG_DEBUG && !self->debug) {
+    if (level == LOG_DEBUG && !self->debug)
         return err;
-    }
     const char* domain = NULL;
     switch (err.type) {
         case ZFSCRYPT_ERR_OS:
@@ -68,7 +68,10 @@ zfscrypt_err_t zfscrypt_context_log_err(zfscrypt_context_t* self, zfscrypt_err_t
             domain = "UNKNOWN";
             break;
     }
-    zfscrypt_context_log(self, level, "%s: %s: %s (%s:%d:%s)", domain, err.message, err.description, err.file, err.line, err.function);
+    zfscrypt_context_log(
+        self, level, "%s: %s: %s (%s:%d:%s)",
+        domain, err.message, err.description, err.file, err.line, err.function
+    );
     return err;
 }
 
@@ -86,7 +89,7 @@ zfscrypt_err_t zfscrypt_context_persist_token(zfscrypt_context_t* self) {
 }
 
 zfscrypt_err_t zfscrypt_context_restore_token(zfscrypt_context_t* self, const char** token) {
-    zfscrypt_err_t err = zfscrypt_context_pam_data_get_token(self, token);
+    const zfscrypt_err_t err = zfscrypt_context_pam_data_get_token(self, token);
     zfscrypt_context_log_err(self, err);
     return err;
 }
@@ -106,36 +109,34 @@ zfscrypt_err_t zfscrypt_context_get_tokens(zfscrypt_context_t* self, const char*
 }
 
 zfscrypt_err_t zfscrypt_context_drop_privs(zfscrypt_context_t* self) {
-    struct passwd const* const pwd = pam_modutil_getpwnam(self->pam, self->user);
-    int status = 0;
-    zfscrypt_err_t err = zfscrypt_err_pam(status, "Dropped privileges");
+    const struct passwd* const pwd = pam_modutil_getpwnam(self->pam, self->user);
+    zfscrypt_err_t err = zfscrypt_err_pam(0, "Dropping privileges");
     if (pwd == NULL)
         err = zfscrypt_err_pam(PAM_SESSION_ERR, "Could not get passwd entry for user");
     if (!err.value)
-        status = pam_modutil_drop_priv(self->pam, &self->privs, pwd);
-    if (status)
-        err = zfscrypt_err_pam(status, "Could not drop privileges");
+        err = zfscrypt_err_pam(
+            pam_modutil_drop_priv(self->pam, &self->privs, pwd),
+            "Dropping privileges"
+        );
     zfscrypt_context_log_err(self, err);
     return err;
 }
 
 zfscrypt_err_t zfscrypt_context_regain_privs(zfscrypt_context_t* self) {
     const int status = pam_modutil_regain_priv(self->pam, &self->privs);
-    const zfscrypt_err_t err = status == 0
-        ? zfscrypt_err_pam(status, "Regained privileges")
-        : zfscrypt_err_pam(status, "Could not regain privileges");
+    const zfscrypt_err_t err = zfscrypt_err_pam(status, "Regaining privileges");
     zfscrypt_context_log_err(self, err);
     return err;
 }
 
 // private methods
 
-void zfscrypt_parse_args(zfscrypt_context_t* self, int argc, const char** argv) {
+void zfscrypt_parse_args(zfscrypt_context_t* self, const int argc, const char** argv) {
     for (int i = 0; i < argc; ++i) {
         const char* item = argv[i];
         if (streq(item, ZFSCRYPT_CONTEXT_ARG_DEBUG)) {
             self->debug = true;
-            zfscrypt_context_log(self, LOG_DEBUG, "%s", "Debug mode on");
+            zfscrypt_context_log(self, LOG_DEBUG, "Debug mode on");
         } else if (strncmp(item, ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR, ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR_LEN) == 0) {
             self->runtime_dir = &item[ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR_LEN];
             zfscrypt_context_log(self, LOG_DEBUG, "Using runtime dir %s", self->runtime_dir);
@@ -147,52 +148,42 @@ void zfscrypt_parse_args(zfscrypt_context_t* self, int argc, const char** argv) 
 
 zfscrypt_err_t zfscrypt_context_pam_get_user(zfscrypt_context_t* self, const char** user) {
     const int err = pam_get_user(self->pam, user, NULL);
-    return err == 0 && user != NULL
-        ? zfscrypt_err_pam(err, "Got user from pam")
-        : zfscrypt_err_pam(err, "Could not get user from pam");
+    assert(err || user != NULL);
+    return zfscrypt_err_pam(err, "Getting user name from pam");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_items_get_token(zfscrypt_context_t* self, const char** token) {
     const int err = pam_get_item(self->pam, PAM_AUTHTOK, (const void**) token);
-    return err == 0 && token != NULL
-        ? zfscrypt_err_pam(err, "Got token from pam items")
-        : zfscrypt_err_pam(PAM_AUTHTOK_ERR, "Could not get current password from pam");
+    assert(err || token != NULL);
+    return zfscrypt_err_pam(err, "Getting current password from pam");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_items_get_old_token(zfscrypt_context_t* self, const char** token) {
     const int err = pam_get_item(self->pam, PAM_OLDAUTHTOK, (const void**) token);
-    return err == 0 && token != NULL
-        ? zfscrypt_err_pam(0, "Got old token from pam items")
-        : zfscrypt_err_pam(PAM_AUTHTOK_ERR, "Could not get old login token from pam items");
-    ;
+    assert(err || token != NULL);
+    return zfscrypt_err_pam(err, "Getting old token from pam items");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_ask_token(zfscrypt_context_t* self, const char** token) {
     const int err = pam_get_authtok(self->pam, PAM_AUTHTOK, token, "Decryption key:");
-    return err == 0
-        ? zfscrypt_err_pam(err, "Asked pam for token")
-        : zfscrypt_err_pam(err, "Could not ask for login token");
+    assert(err || token != NULL);
+    return zfscrypt_err_pam(err, "Asking pam for token");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_data_set_token(zfscrypt_context_t* self, const char* token) {
-    const int err = pam_set_data(self->pam, "zfscrypt_token", (void*) token, secure_cleanup);
-    return err == 0
-        ? zfscrypt_err_pam(err, "Stored token in pam data")
-        : zfscrypt_err_pam(err, "Could not store login token in pam data");
+    const int err = pam_set_data(self->pam, ZFSCRYPT_CONTEXT_PAM_DATA_TOKEN, (void*) token, secure_cleanup);
+    return zfscrypt_err_pam(err, "Storing token in pam data");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_data_get_token(zfscrypt_context_t* self, const char** token) {
-    const int err = pam_get_data(self->pam, "zfscrypt_token", (const void**) token);
-    return err == 0
-        ? zfscrypt_err_pam(err, "Got token from pam data")
-        : zfscrypt_err_pam(err, "Could not get login token from pam data");
+    const int err = pam_get_data(self->pam, ZFSCRYPT_CONTEXT_PAM_DATA_TOKEN, (const void**) token);
+    assert(err || token != NULL);
+    return zfscrypt_err_pam(err, "Getting token from pam data");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_data_clear_token(unused zfscrypt_context_t* self) {
-    const int err = pam_set_data(self->pam, "zfscrypt_token", NULL, NULL);
-    return err == 0
-        ? zfscrypt_err_pam(err, "Cleared token from pam data")
-        : zfscrypt_err_pam(err, "Could not remove login token from pam data");
+    const int err = pam_set_data(self->pam, ZFSCRYPT_CONTEXT_PAM_DATA_TOKEN, NULL, NULL);
+    return zfscrypt_err_pam(err, "Clearing token from pam data");
 }
 
 // private constants
@@ -201,3 +192,4 @@ const char ZFSCRYPT_CONTEXT_ARG_DEBUG[] = "debug";
 const char ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR[] = "runtime_dir=";
 // -1 to remove trailing null byte
 const size_t ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR_LEN = sizeof(ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR) - 1;
+const char ZFSCRYPT_CONTEXT_PAM_DATA_TOKEN[] = "zfsrypt_token";

@@ -9,6 +9,7 @@
 
 typedef enum zfscrypt_err_type {
     ZFSCRYPT_ERR_OS,
+    ZFSCRYPT_ERR_OOM,
     ZFSCRYPT_ERR_PAM,
     ZFSCRYPT_ERR_ZFS
 } zfscrypt_err_type;
@@ -29,7 +30,9 @@ zfscrypt_err_t zfscrypt_err_zfs_create(const int value, const char* message, con
 
 int zfscrypt_err_for_pam(zfscrypt_err_t err);
 
-// FIXME Binary compatible dummy of libzfs_handle_t, because fields of libzfs_handle struct are unknown to compiler and importing <libzfs_impl.h> which defines libzfs_handle results in compiler error about missing <sys/zfs_ioctl.h> header.
+// FIXME Binary compatible dummy of libzfs_handle_t, because fields of libzfs_handle struct
+// are unknown to compiler and importing <libzfs_impl.h> which defines libzfs_handle results in
+// compiler error about missing <sys/zfs_ioctl.h> header.
 typedef struct libzfs_dummy {
     int libzfs_error;
     int dummy_1;

@@ -13,7 +13,7 @@
 zfscrypt_err_t zfscrypt_session_counter_update(int* result, const char* base_dir, const char* file_name, const int delta) {
     int err = make_private_dir(base_dir);
     if (err)
-        return zfscrypt_err_os(err, "Could not create private dir");
+        return zfscrypt_err_os(err, "Could not create runtime directory");
 
     defer(free_ptr) char* path = strfmt("%s/%s", base_dir, file_name);
     if (path == NULL)
