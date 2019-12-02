@@ -11,7 +11,8 @@
 #include "zfscrypt_utils.h"
 
 /*
- * Stores authentication token in pam data
+ * Gets ephemeral authentication token (aka user password) from pam and stores it in pam data
+ * to retrieve it later in pam_sm_open_session.
  */
 extern int pam_sm_authenticate(pam_handle_t* handle, int flags, int argc, const char** argv) {
     zfscrypt_context_t context;
@@ -26,32 +27,25 @@ extern int pam_sm_authenticate(pam_handle_t* handle, int flags, int argc, const 
 }
 
 /*
- * No-op
- *
  * In this function we check that the user is allowed in the system. We already know
  * that he's authenticated, but we could apply restrictions based on time of the day,
- * resources in the system etc.
+ * resources in the system etc. For zfscrypt this is a no-op.
  */
 extern int pam_sm_acct_mgmt(unused pam_handle_t* handle, unused int flags, unused int argc, unused const char** argv) {
     return PAM_IGNORE;
 }
 
 /*
- * No-op
- *
- * We could have many more information of the user other then password and username.
- * These are the credentials. For example, a kerberos ticket. Here we establish those
- * and make them visible to the application.
+ * We could have many more information of the user other then username and password.
+ * For example, get a kerberos ticket. For zfscrypt this is a no-op.
  */
 extern int pam_sm_setcred(unused pam_handle_t* handle, unused int flags, unused int argc, unused const char** argv) {
     return PAM_IGNORE;
 }
 
 /*
- * Counts active sessions, reads authentication token from pam data, executes zfs load-key and zfs mount
- *
- * When the application wants to open a session, this function is called. Here we should
- * build the user environment (setting environment variables, mounting directories etc).
+ * Counts active sessions. Executes zfs load-key and zfs mount on all user datasets
+ * if it's the first session.
  */
 extern int pam_sm_open_session(pam_handle_t* handle, int flags, int argc, char const** argv) {
     zfscrypt_context_t context;
@@ -79,9 +73,7 @@ extern int pam_sm_open_session(pam_handle_t* handle, int flags, int argc, char c
 }
 
 /*
- * Counts active sessions, executes zfs umount and zfs unload-key, drops logsystem caches
- *
- * Here we destroy the environment we have created above.
+ * Counts active sessions. Executes zfs umount and zfs unload-key if it's the last session.
  */
 extern int pam_sm_close_session(pam_handle_t* handle, int flags, int argc, char const** argv) {
     zfscrypt_context_t context;
@@ -106,10 +98,8 @@ extern int pam_sm_close_session(pam_handle_t* handle, int flags, int argc, char 
 }
 
 /*
- * Reads authentication token from pam data, executes zfs change-key
- *
- * This function is called to change the authentication token. Here we should,
- * for example, change the user password with the new password.
+ * Reads old and new authentication token from pam and executes zfs change-key on all user datasets
+ * in order to keep encryption key and login password in sync.
  */
 extern int pam_sm_chauthtok(pam_handle_t* handle, int flags, int argc, char const** argv) {
     if (flags & PAM_PRELIM_CHECK) {
