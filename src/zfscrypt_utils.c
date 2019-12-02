@@ -14,24 +14,21 @@
 
 // public functions
 
-// from https://github.com/systemd/systemd/blob/master/src/basic/alloc-util.h
 void free_ptr(void* data) {
     free(*(void**) data);
 }
 
-// from https://github.com/systemd/systemd/blob/master/src/basic/fd-util.h
 void close_file(FILE** file) {
     if (*file != NULL) {
         const int err = fclose(*file);
-        assert(err >= 0 || errno != EBADF);
+        assert(err == 0);
     }
 }
 
-// from https://github.com/systemd/systemd/blob/master/src/basic/fd-util.h
 void close_fd(int const* fd) {
     if (*fd >= 0) {
         const int err = close(*fd);
-        assert(err >= 0 || errno != EBADF);
+        assert(err == 0);
     }
 }
 
@@ -85,7 +82,13 @@ int open_exclusive(const char* path, const int flags) {
     return fd;
 }
 
-// Stolen from https://github.com/google/fscrypt/blob/master/security/cache.go
+/*
+ * Instructs kernel to free the reclaimable inodes and dentries.
+ * This has the effect of making encrypted directories whose keys are
+ * not present no longer accessible. Requires root privileges.
+ *
+ * Also see https://www.kernel.org/doc/Documentation/sysctl/vm.txt
+ */
 int drop_filesystem_cache() {
     sync();
     defer(close_file) FILE* file = fopen("/proc/sys/vm/drop_caches", "w");
