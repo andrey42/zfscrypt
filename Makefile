@@ -5,7 +5,7 @@ INCDIR ?= ./include
 DESTDIR ?= ./build
 
 # libspl is incompatible with -std=c18
-CFLAGS := -std=gnu18 -g -Og -Wall -Wextra -Wpedantic -fPIC -fno-stack-protector -flto -I$(INCDIR) -MMD -MP
+CFLAGS := -std=gnu18 -O2 -Wall -Wextra -Wpedantic -fPIC -fno-stack-protector -flto -I$(INCDIR) -MMD -MP
 ZFSINC := -isystem/usr/include/libzfs -isystem/usr/include/libspl
 
 SRCS := $(wildcard $(SRCDIR)/*.c)
