@@ -116,17 +116,20 @@ extern int pam_sm_chauthtok(pam_handle_t* handle, int flags, int argc, char cons
             err = zfscrypt_context_drop_privs(&context);
         if (!err.value)
             err = zfscrypt_context_get_tokens(&context, &old_token, &new_token);
-        // FIXME passwd updates the login password even if we fail intentionally here
+       // Unfortunately we cant prevent a password change here. All we can do is warn the user.
         if (!err.value && strlen(new_token) < 8)
-            err = zfscrypt_err_pam(
-                PAM_AUTHTOK_ERR,
-                "ZFS encryption requires a minimum password length of eight characters"
+            pam_error(
+                context.pam,
+                "Warning: Password to short for ZFS encryption. "
+                "Minimum length of eight characters required. "
+                "Login password and encryption key are out of sync."
             );
+            err = zfscrypt_err_pam(PAM_AUTHTOK_ERR, "password to short");
         if (!err.value)
             err = zfscrypt_dataset_update_all(&context, old_token, new_token);
         if (context.privs.is_dropped)
             (void) zfscrypt_context_regain_privs(&context);
         return zfscrypt_context_end(&context, err);
     }
-    return PAM_IGNORE;
+    return PAM_SERVICE_ERR;
 }

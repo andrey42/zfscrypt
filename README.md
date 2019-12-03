@@ -38,6 +38,14 @@ session optional pam_zfscrypt.so
 
 The first line is needed to work around some [quirks in systemd](https://wiki.archlinux.org/index.php/Pam_mount).
 
+If you use the `pam_unix.so` or `pam_cracklib.so` module in `/etc/pam.d/passwd` add `minlen=8` to it's module arguments. It should look something like this:
+
+~~~ pam
+password required pam_unix.so sha512 shadow minlen=8
+~~~
+
+ZFS encryption enforces a minimum password length of eight characters.
+
 Finally append the next line to `etc/pam.d/passwd`:
 
 ~~~ pam
