@@ -151,26 +151,30 @@ void zfscrypt_parse_args(zfscrypt_context_t* self, const int argc, const char** 
 }
 
 zfscrypt_err_t zfscrypt_context_pam_get_user(zfscrypt_context_t* self, const char** user) {
-    const int err = pam_get_user(self->pam, user, NULL);
-    assert(err || user != NULL);
+    int err = pam_get_user(self->pam, user, NULL);
+    if (!err && *user == NULL)
+        err = PAM_USER_UNKNOWN;
     return zfscrypt_err_pam(err, "Getting user name from pam");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_items_get_token(zfscrypt_context_t* self, const char** token) {
-    const int err = pam_get_item(self->pam, PAM_AUTHTOK, (const void**) token);
-    assert(err || token != NULL);
+    int err = pam_get_item(self->pam, PAM_AUTHTOK, (const void**) token);
+    if (!err && *token == NULL)
+        err = PAM_AUTHTOK_ERR;
     return zfscrypt_err_pam(err, "Getting current password from pam");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_items_get_old_token(zfscrypt_context_t* self, const char** token) {
-    const int err = pam_get_item(self->pam, PAM_OLDAUTHTOK, (const void**) token);
-    assert(err || token != NULL);
+    int err = pam_get_item(self->pam, PAM_OLDAUTHTOK, (const void**) token);
+    if (!err && *token == NULL)
+        err = PAM_AUTHTOK_ERR;
     return zfscrypt_err_pam(err, "Getting old token from pam items");
 }
 
 zfscrypt_err_t zfscrypt_context_pam_ask_token(zfscrypt_context_t* self, const char** token) {
-    const int err = pam_get_authtok(self->pam, PAM_AUTHTOK, token, "Decryption key:");
-    assert(err || token != NULL);
+    int err = pam_get_authtok(self->pam, PAM_AUTHTOK, token, "Decryption key:");
+    if (!err && *token == NULL)
+        err = PAM_AUTHTOK_ERR;
     return zfscrypt_err_pam(err, "Asking pam for token");
 }
 
@@ -180,8 +184,9 @@ zfscrypt_err_t zfscrypt_context_pam_data_set_token(zfscrypt_context_t* self, con
 }
 
 zfscrypt_err_t zfscrypt_context_pam_data_get_token(zfscrypt_context_t* self, const char** token) {
-    const int err = pam_get_data(self->pam, ZFSCRYPT_CONTEXT_PAM_DATA_TOKEN, (const void**) token);
-    assert(err || token != NULL);
+    int err = pam_get_data(self->pam, ZFSCRYPT_CONTEXT_PAM_DATA_TOKEN, (const void**) token);
+    if (!err && *token == NULL)
+        err = PAM_AUTHTOK_ERR;
     return zfscrypt_err_pam(err, "Getting token from pam data");
 }
 
