@@ -10,6 +10,7 @@ typedef struct zfscrypt_context {
     pam_handle_t* pam;
     libzfs_handle_t* libzfs;
     bool debug;
+    bool free_inodes;
     const char* runtime_dir;
     const char* user;
     struct pam_modutil_privs privs;
@@ -59,6 +60,7 @@ zfscrypt_err_t zfscrypt_context_pam_data_clear_token(zfscrypt_context_t* self);
 // private constants
 
 extern const char ZFSCRYPT_CONTEXT_ARG_DEBUG[];
+extern const char ZFSCRYPT_CONTEXT_ARG_FREE_INODES[];
 extern const char ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR[];
 extern const size_t ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR_LEN;
 extern const char ZFSCRYPT_CONTEXT_PAM_DATA_TOKEN[];

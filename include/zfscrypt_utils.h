@@ -32,7 +32,7 @@ int open_exclusive(const char* path, const int flags);
 // not present no longer accessible. Requires root privileges.
 //
 // Also see https://www.kernel.org/doc/Documentation/sysctl/vm.txt
-int drop_filesystem_cache();
+int free_reclaimable_inodes();
 
 void* secure_malloc(const size_t size);
 

@@ -50,10 +50,11 @@ Having problems with PAM? Maybe one of this Arch Wiki pages can help you: [pam](
 
 The zfscrypt PAM module takes the following, optional arguments:
 
-| Argument      | Description                                                  |
-|---------------|--------------------------------------------------------------|
-| `runtime_dir` | where to store session counters, defaults to `/run/zfscrypt` |
-| `debug`       | enables verbose logging                                      |
+| Argument      | Description                                                                                                                   |
+|---------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `runtime_dir` | where to store session counters, defaults to `/run/zfscrypt`                                                                  |
+| `free_inodes` | enables freeing of reclaimable inodes and dentries on logout, which might bring security benefits and/or performance problems |
+| `debug`       | enables verbose logging                                                                                                       |
 
 ## Usage
 

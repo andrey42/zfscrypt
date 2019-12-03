@@ -92,7 +92,8 @@ extern int pam_sm_close_session(pam_handle_t* handle, int flags, int argc, char 
             err = zfscrypt_dataset_lock_all(&context);
         if (context.privs.is_dropped)
             (void) zfscrypt_context_regain_privs(&context);
-        (void) drop_filesystem_cache();
+        if (context.free_inodes)
+            (void) free_reclaimable_inodes();
     }
     return zfscrypt_context_end(&context, err);
 }

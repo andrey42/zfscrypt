@@ -82,7 +82,7 @@ int open_exclusive(const char* path, const int flags) {
     return fd;
 }
 
-int drop_filesystem_cache() {
+int free_reclaimable_inodes() {
     sync();
     defer(close_file) FILE* file = fopen("/proc/sys/vm/drop_caches", "w");
     if (file == NULL)

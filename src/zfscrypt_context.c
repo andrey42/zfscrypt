@@ -18,6 +18,7 @@ zfscrypt_err_t zfscrypt_context_begin(zfscrypt_context_t* self, pam_handle_t* ha
     self->pam = handle;
     self->libzfs = libzfs_init();
     self->debug = false;
+    self->free_inodes = false;
     self->runtime_dir = ZFSCRYPT_DEFAULT_RUNTIME_DIR;
     self->user = NULL;
     // taken from PAM_MODUTIL_DEF_PRIVS macro from <security/pam_modutil.h>
@@ -136,7 +137,10 @@ void zfscrypt_parse_args(zfscrypt_context_t* self, const int argc, const char** 
         const char* item = argv[i];
         if (streq(item, ZFSCRYPT_CONTEXT_ARG_DEBUG)) {
             self->debug = true;
-            zfscrypt_context_log(self, LOG_DEBUG, "Debug mode on");
+            zfscrypt_context_log(self, LOG_DEBUG, "Debug mode enabled");
+        } else if (streq(item, ZFSCRYPT_CONTEXT_ARG_FREE_INODES)) {
+            self->free_inodes = true;
+            zfscrypt_context_log(self, LOG_DEBUG, "Freeing of reclaimable inodes enabled");
         } else if (strncmp(item, ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR, ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR_LEN) == 0) {
             self->runtime_dir = &item[ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR_LEN];
             zfscrypt_context_log(self, LOG_DEBUG, "Using runtime dir %s", self->runtime_dir);
@@ -189,6 +193,7 @@ zfscrypt_err_t zfscrypt_context_pam_data_clear_token(unused zfscrypt_context_t* 
 // private constants
 
 const char ZFSCRYPT_CONTEXT_ARG_DEBUG[] = "debug";
+const char ZFSCRYPT_CONTEXT_ARG_FREE_INODES[] = "free_inodes";
 const char ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR[] = "runtime_dir=";
 // -1 to remove trailing null byte
 const size_t ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR_LEN = sizeof(ZFSCRYPT_CONTEXT_ARG_RUNTIME_DIR) - 1;
