@@ -41,7 +41,7 @@ $(DESTDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 install: $(DESTDIR)/pam_zfscrypt.so
-	install -m 0755 -s $< $(PREFIX)/lib/security/pam_zfscrypt.so
+	install -D -m 0755 -s $< $(PREFIX)/lib/security/pam_zfscrypt.so
 
 test:
 	$(CC) $(CFLAGS) -I./test -g -Og -o $(DESTDIR)/test ./test/test.c -lpam

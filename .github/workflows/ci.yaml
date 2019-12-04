@@ -1,0 +1,41 @@
+name: CI
+on:
+  # push:
+  # branches:
+  # - master
+  pull_request:
+    branches:
+    - master
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro:
+        # always rolling
+        - name: archlinux
+          release: latest
+        # last lts
+        # - name: ubuntu
+        #   release: latest
+        # last semi-annual release
+        - name: ubuntu
+          release: rolling
+        # next semi-annual release
+        - name: ubuntu
+          release: devel
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+    - name: Create ZFS pool
+      run: |
+        sudo apt-get install --no-install-recommends --yes zfsutils
+        sudo modprobe zfs
+        sudo truncate --size=128m /mnt/disk0.img /mnt/disk1.img
+        sudo zpool create tank mirror /mnt/disk0.img /mnt/disk1.img
+      env:
+        DEBIAN_FRONTEND: noninteractive
+    - name: Build image
+      run: docker build --tag zfscrypt:${{ matrix.distro.name }}-${{ matrix.distro.release }} --build-arg RELEASE=${{ matrix.distro.release }} ./test/${{ matrix.distro.name }}
+    - name: Run container
+      run: docker run --interactive --privileged --rm --volume $PWD:/workdir zfscrypt:${{ matrix.distro.name }}-${{ matrix.distro.release }}
