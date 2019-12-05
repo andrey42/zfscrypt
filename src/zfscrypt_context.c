@@ -102,9 +102,9 @@ zfscrypt_err_t zfscrypt_context_clear_token(zfscrypt_context_t* self) {
 }
 
 zfscrypt_err_t zfscrypt_context_get_tokens(zfscrypt_context_t* self, const char** old_token, const char** new_token) {
-    zfscrypt_err_t err = zfscrypt_context_pam_items_get_old_token(self, old_token);
+    zfscrypt_err_t err = zfscrypt_context_pam_items_get_token(self, new_token);
     if (!err.value)
-        err = zfscrypt_context_pam_items_get_token(self, new_token);
+        err = zfscrypt_context_pam_items_get_old_token(self, old_token);
     zfscrypt_context_log_err(self, err);
     return err;
 }
