@@ -1,22 +1,11 @@
+#include "test.h"
+
 #include <errno.h>
 #include <security/pam_appl.h>
 #include <security/pam_misc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define TEST_POOL "tank"
-#define TEST_USER "tester"
-#define TEST_PASSWORD "passw0rd"
-#define TEST_NEW_PASSWORD "12345678"
-#define TEST_BASE_DIR "/tmp/zfscrypt-test"
-
-#define TEST_HOME_DIR TEST_BASE_DIR "/home"
-#define TEST_MOUNTPOINT TEST_HOME_DIR "/" TEST_USER
-#define TEST_DATASET_PARENT TEST_POOL "/zfscrypt-test"
-#define TEST_DATASET TEST_DATASET_PARENT "/" TEST_USER
-#define TEST_RUNTIME_DIR TEST_BASE_DIR "/run"
-#define TEST_RUNTIME_FILE TEST_RUNTIME_DIR "/" TEST_USER
 
 #define assert(expr) \
     if (!(expr)) { \
@@ -51,23 +40,23 @@ int system_run(const char* command) {
 }
 
 void setup() {
-    system_run("mkdir -p " TEST_HOME_DIR " " TEST_RUNTIME_DIR);
-    system_run("zfs create -o mountpoint=" TEST_HOME_DIR " " TEST_DATASET_PARENT);
-    system_run("echo " TEST_PASSWORD " | zfs create -o io.github.benkerry:zfscrypt_user=" TEST_USER " -o encryption=on -o keylocation=prompt -o keyformat=passphrase -o canmount=noauto " TEST_DATASET);
-    system_run("zfs mount " TEST_DATASET_PARENT);
-    system_run("zfs mount " TEST_DATASET);
-    system_run("useradd --no-user-group --home-dir " TEST_MOUNTPOINT " --create-home " TEST_USER);
-    system_run("zfs allow -u " TEST_USER " load-key,change-key,mount " TEST_DATASET);
-    system_run("echo " TEST_USER ":" TEST_PASSWORD " | chpasswd");
+    system_run("mkdir -p " TEST_HOME_MOUNTPOINT " " TEST_RUNTIME_DIR);
+    system_run("zfs create -o mountpoint=" TEST_HOME_MOUNTPOINT " " TEST_HOME_DATASET);
+    system_run("echo " TEST_USER_PASSWORD " | zfs create -o io.github.benkerry:zfscrypt_user=" TEST_USER_NAME " -o encryption=on -o keylocation=prompt -o keyformat=passphrase -o canmount=noauto " TEST_USER_DATASET);
+    system_run("zfs mount " TEST_HOME_DATASET);
+    system_run("zfs mount " TEST_USER_DATASET);
+    system_run("useradd --no-user-group --home-dir " TEST_USER_MOUNTPOINT " --create-home " TEST_USER_NAME);
+    system_run("zfs allow -u " TEST_USER_NAME " load-key,change-key,mount " TEST_USER_DATASET);
+    system_run("echo " TEST_USER_NAME ":" TEST_USER_PASSWORD " | chpasswd");
 }
 
 void teardown() {
-    system_run("zfs umount " TEST_DATASET);
-    system_run("zfs unload-key " TEST_DATASET);
-    system_run("zfs destroy " TEST_DATASET);
-    system_run("zfs destroy " TEST_DATASET_PARENT);
-    system_run("userdel " TEST_USER);
-    system_run("rm -rf " TEST_BASE_DIR);
+    system_run("zfs umount " TEST_USER_DATASET);
+    system_run("zfs unload-key " TEST_USER_DATASET);
+    system_run("zfs destroy " TEST_USER_DATASET);
+    system_run("zfs destroy " TEST_HOME_DATASET);
+    system_run("userdel " TEST_USER_NAME);
+    system_run("rm -rf " TEST_HOME_MOUNTPOINT " " TEST_RUNTIME_DIR);
 }
 
 int system_assert_impl(const char* command) {
@@ -171,21 +160,21 @@ void test_session_handling(const test_data_t* data, const struct pam_conv* conv)
     pam_assert(pam_authenticate(handle1, flags));
     pam_assert(pam_open_session(handle1, flags));
     assert(get_session_counter() == 1);
-    system_assert("zfs mount | grep -q ^" TEST_DATASET);
+    system_assert("zfs mount | grep -q ^" TEST_USER_DATASET);
     pam_handle_t* handle2 = NULL;
     pam_assert(pam_start("login", data->user, conv, &handle2));
     pam_assert(pam_authenticate(handle2, flags));
     pam_assert(pam_open_session(handle2, flags));
     assert(get_session_counter() == 2);
-    system_assert("zfs mount | grep -q ^" TEST_DATASET);
+    system_assert("zfs mount | grep -q ^" TEST_USER_DATASET);
     pam_assert(pam_close_session(handle1, flags));
     pam_assert(pam_end(handle1, PAM_SUCCESS));
     assert(get_session_counter() == 1);
-    system_assert("zfs mount | grep -q ^" TEST_DATASET);
+    system_assert("zfs mount | grep -q ^" TEST_USER_DATASET);
     pam_assert(pam_close_session(handle2, flags));
     pam_assert(pam_end(handle2, PAM_SUCCESS));
     assert(get_session_counter() == 0);
-    system_assert_not("zfs mount | grep -q ^" TEST_DATASET);
+    system_assert_not("zfs mount | grep -q ^" TEST_USER_DATASET);
 }
 
 void test_password_change(const test_data_t* data, const struct pam_conv* conv) {
@@ -194,9 +183,9 @@ void test_password_change(const test_data_t* data, const struct pam_conv* conv) 
     pam_assert(pam_start("passwd", data->user, conv, &handle));
     pam_assert(pam_chauthtok(handle, flags));
     pam_assert(pam_end(handle, PAM_SUCCESS));
-    system_run("zfs umount " TEST_DATASET);
-    system_run("zfs unload-key " TEST_DATASET);
-    system_assert("echo " TEST_NEW_PASSWORD " | zfs load-key " TEST_DATASET);
+    system_run("zfs umount " TEST_USER_DATASET);
+    system_run("zfs unload-key " TEST_USER_DATASET);
+    system_assert("echo " TEST_USER_NEW_PASSWORD " | zfs load-key " TEST_USER_DATASET);
 }
 
 typedef void (*test_f)(const test_data_t* data, const struct pam_conv* conv);
@@ -209,7 +198,7 @@ void run_test(test_f test, const test_data_t* data, const struct pam_conv* conv)
 }
 
 int main() {
-    test_data_t data = {.user = TEST_USER, .token = TEST_PASSWORD, .new_token = TEST_NEW_PASSWORD};
+    test_data_t data = {.user = TEST_USER_NAME, .token = TEST_USER_PASSWORD, .new_token = TEST_USER_NEW_PASSWORD};
     const struct pam_conv conv = {.conv = pamtester_conv, .appdata_ptr = &data};
     run_test(test_session_handling, &data, &conv);
     run_test(test_password_change, &data, &conv);

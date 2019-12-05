@@ -44,7 +44,7 @@ install: $(DESTDIR)/pam_zfscrypt.so
 	install -m 0755 -s $< $(PREFIX)/lib/security/pam_zfscrypt.so
 
 test:
-	$(CC) $(CFLAGS) -g -Og -o $(DESTDIR)/test ./test/test.c -lpam
+	$(CC) $(CFLAGS) -I./test -g -Og -o $(DESTDIR)/test ./test/test.c -lpam
 	$(DESTDIR)/test
 
 -include $(DEPS)
