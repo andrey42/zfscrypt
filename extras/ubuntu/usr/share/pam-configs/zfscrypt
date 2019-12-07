@@ -1,0 +1,16 @@
+Name: zfscrypt
+Default: no
+Priority: 0
+Auth-Type: Additional
+Auth-Final:
+  optional pam_zfscrypt.so debug
+
+Session-Type: Additional
+Session-Interactive-Only: yes
+Session-Final:
+  [success=1 default=ignore] pam_succeed_if.so service = systemd-user quiet
+  optional pam_zfscrypt.so runtime_dir=/zfscrypt/run free_inodes debug
+
+Password-Type: Additional
+Password-Final:
+  optional pam_zfscrypt.so debug
