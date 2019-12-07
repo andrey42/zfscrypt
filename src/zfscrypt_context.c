@@ -5,6 +5,7 @@
 #include <security/pam_ext.h>
 #include <security/pam_modules.h>
 #include <security/pam_modutil.h>
+#include <stdio.h>
 #include <string.h>
 #include <syslog.h>
 
@@ -42,12 +43,19 @@ int zfscrypt_context_end(zfscrypt_context_t* self, zfscrypt_err_t err) {
 }
 
 void zfscrypt_context_log(zfscrypt_context_t* self, const int level, const char* format, ...) {
-    if (self->pam == NULL)
-        return;
-    va_list args;
-    va_start(args, format);
-    pam_vsyslog(self->pam, level, format, args);
-    va_end(args);
+    if (self->debug) {
+        va_list args;
+        va_start(args, format);
+        vfprintf(stderr, format, args);
+        printf("\n");
+        va_end(args);
+    }
+    if (self->pam != NULL) {
+        va_list args;
+        va_start(args, format);
+        pam_vsyslog(self->pam, level, format, args);
+        va_end(args);
+    }
 }
 
 zfscrypt_err_t zfscrypt_context_log_err(zfscrypt_context_t* self, zfscrypt_err_t err) {
